@@ -1,0 +1,56 @@
+import cv2
+import os
+from sklearn.decomposition import PCA
+
+
+X=[]
+y=[]
+img_list=os.listdir('monu')
+for img in img_list:
+    gray=cv2.imread(f'monu/{img}',cv2.IMREAD_GRAYSCALE)
+    gray=cv2.resize(gray,(60,60))
+    X.append(gray.flatten())
+    y.append('monu')
+img_list=os.listdir('udit')
+for img in img_list:
+    gray=cv2.imread(f'udit/{img}',cv2.IMREAD_GRAYSCALE)
+    gray=cv2.resize(gray,(60,60))
+    X.append(gray.flatten())
+    y.append('udit')
+
+import numpy as np
+X_train=np.array(X)
+y_train=np.array(y)    
+X_train.shape
+
+pca=PCA(.99)
+X_train_new=pca.fit_transform(X_train)
+X_train_new.shape
+
+from sklearn.linear_model import LogisticRegression
+log=LogisticRegression(solver='lbfgs')
+log.fit(X_train_new,y_train)
+
+
+vdocap=cv2.VideoCapture(0) #external webcam
+clf=cv2.CascadeClassifier('C:/Users/monu/Anaconda3/Lib/site-packages/cv2/data/haarcascade_frontalface_default.xml')
+while(True):
+    flag,img_clr=vdocap.read()
+    if(flag==False):
+        break
+    img_gray=cv2.cvtColor(img_clr,cv2.COLOR_BGR2GRAY)
+    faces=clf.detectMultiScale(img_gray)
+    for x,y,w,h in faces:
+        cv2.rectangle(img_clr,(x,y),(x+w,y+h),(0,0,255),2)
+        myface=img_gray[y:y+h,x:x+w]
+        myface=cv2.resize(myface,(60,60))
+        myface=myface.reshape(1,3600)
+        X_test=pca.transform(myface)
+        pred=log.predict(X_test)
+        cv2.putText(img_clr,pred[0],(x,y-10),cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),1)
+    cv2.imshow('',img_clr)
+    k=cv2.waitKey(1)
+    if(k==ord('q')):
+        break
+vdocap.release()        
+cv2.destroyAllWindows()
